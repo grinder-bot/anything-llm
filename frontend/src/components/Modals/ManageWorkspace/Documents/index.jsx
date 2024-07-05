@@ -1,10 +1,9 @@
 import { ArrowsDownUp } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
-import System from "../../../../models/system";
 import Workspace from "../../../../models/workspace";
+import System from "../../../../models/system";
 import showToast from "../../../../utils/toast";
 import Directory from "./Directory";
-import UploadFile from "./UploadFile";
 import WorkspaceDirectory from "./WorkspaceDirectory";
 
 // OpenAI Cost per token
@@ -16,11 +15,7 @@ const MODEL_COSTS = {
   "text-embedding-3-large": 0.00000013, // $0.00013 / 1K tokens
 };
 
-export default function DocumentSettings({
-  isUploadedDoc = false,
-  workspace,
-  systemSettings,
-}) {
+export default function DocumentSettings({ workspace, systemSettings }) {
   const [highlightWorkspace, setHighlightWorkspace] = useState(false);
   const [availableDocs, setAvailableDocs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -212,39 +207,24 @@ export default function DocumentSettings({
         setHighlightWorkspace={setHighlightWorkspace}
         moveToWorkspace={moveSelectedItemsToWorkspace}
         setLoadingMessage={setLoadingMessage}
-        isUploadedDoc={isUploadedDoc}
       />
-      {isUploadedDoc ? (
-        <div style={{ margin: "3.7rem 2rem 2rem 2rem" }}>
-          <UploadFile
-            workspace={workspace}
-            fetchKeys={fetchKeys}
-            setLoading={setLoading}
-            setLoadingMessage={setLoadingMessage}
-          />
-        </div>
-      ) : null}
-      {!isUploadedDoc ? (
-        <>
-          <div className="upload-modal-arrow">
-            <ArrowsDownUp className="text-white text-base font-bold rotate-90 w-11 h-11" />
-          </div>
-          <WorkspaceDirectory
-            workspace={workspace}
-            files={workspaceDocs}
-            highlightWorkspace={highlightWorkspace}
-            loading={loading}
-            loadingMessage={loadingMessage}
-            setLoadingMessage={setLoadingMessage}
-            setLoading={setLoading}
-            fetchKeys={fetchKeys}
-            hasChanges={hasChanges}
-            saveChanges={updateWorkspace}
-            embeddingCosts={embeddingsCost}
-            movedItems={movedItems}
-          />
-        </>
-      ) : null}
+      <div className="upload-modal-arrow">
+        <ArrowsDownUp className="text-white text-base font-bold rotate-90 w-11 h-11" />
+      </div>
+      <WorkspaceDirectory
+        workspace={workspace}
+        files={workspaceDocs}
+        highlightWorkspace={highlightWorkspace}
+        loading={loading}
+        loadingMessage={loadingMessage}
+        setLoadingMessage={setLoadingMessage}
+        setLoading={setLoading}
+        fetchKeys={fetchKeys}
+        hasChanges={hasChanges}
+        saveChanges={updateWorkspace}
+        embeddingCosts={embeddingsCost}
+        movedItems={movedItems}
+      />
     </div>
   );
 }
