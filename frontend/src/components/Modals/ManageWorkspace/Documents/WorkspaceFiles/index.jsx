@@ -17,17 +17,20 @@ export default function WorkspaceFiles({ workspace }) {
 
   async function fetchKeys(refetchWorkspace = false) {
     setLoading(true);
-    const localFiles = await System.localFiles();
+    const dbFiles = await System.dbFiles();
+    console.log({ dbFiles });
     const currentWorkspace = refetchWorkspace
       ? await Workspace.bySlug(workspace.slug)
       : workspace;
 
     const documentsInWorkspace =
       currentWorkspace.documents.map((doc) => doc.docpath) || [];
+    console.log({ documentsInWorkspace });
+    console.log({ currentWorkspace });
     // Documents that are not in the workspace
     const availableDocs = {
-      ...localFiles,
-      items: localFiles.items.map((folder) => {
+      ...dbFiles,
+      items: dbFiles.items.map((folder) => {
         if (folder.items && folder.type === "folder") {
           return {
             ...folder,
@@ -45,8 +48,8 @@ export default function WorkspaceFiles({ workspace }) {
 
     // Documents that are already in the workspace
     const workspaceDocs = {
-      ...localFiles,
-      items: localFiles.items.map((folder) => {
+      ...dbFiles,
+      items: dbFiles.items.map((folder) => {
         if (folder.items && folder.type === "folder") {
           return {
             ...folder,
@@ -61,6 +64,8 @@ export default function WorkspaceFiles({ workspace }) {
         }
       }),
     };
+    console.log({ workspaceDocs });
+    console.log({ availableDocs });
     setAvailableDocs(availableDocs);
     setWorkspaceDocs(workspaceDocs);
     setLoading(false);
@@ -104,7 +109,7 @@ export default function WorkspaceFiles({ workspace }) {
     await fetchKeys(true);
     setLoading(false);
     setLoadingMessage("");
-    window.location.reload()
+    window.location.reload();
   };
 
   if (!workspace) return null;

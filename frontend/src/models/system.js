@@ -48,6 +48,17 @@ const System = {
       .then((res) => res.localFiles)
       .catch(() => null);
   },
+  dbFiles: async function () {
+    return await fetch(`${API_BASE}/system/db-files`, {
+      headers: baseHeaders(),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Could not find setup information.");
+        return res.json();
+      })
+      .then((res) => res.dbFiles)
+      .catch(() => null);
+  },
   needsAuthCheck: function () {
     const lastAuthCheck = window.localStorage.getItem(AUTH_TIMESTAMP);
     if (!lastAuthCheck) return true;

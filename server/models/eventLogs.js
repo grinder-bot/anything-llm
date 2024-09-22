@@ -7,7 +7,7 @@ const EventLogs = {
         data: {
           event,
           metadata: metadata ? JSON.stringify(metadata) : null,
-          userId: userId ? Number(userId) : null,
+          userId: userId ? String(userId) : null,
           occurredAt: new Date(),
         },
       });

@@ -3,6 +3,7 @@ const path = require("path");
 const { v5: uuidv5 } = require("uuid");
 const { Document } = require("../../models/documents");
 const { DocumentSyncQueue } = require("../../models/documentSyncQueue");
+const prisma = require("../prisma");
 const documentsPath =
   process.env.NODE_ENV === "development"
     ? path.resolve(__dirname, `../../storage/documents`)
@@ -96,6 +97,70 @@ async function viewLocalFiles() {
     ...directory.items.filter((folder) => folder.name !== "custom-documents"),
   ].filter((i) => !!i);
   return directory;
+}
+
+async function viewDBFiles() {
+  // Make sure custom-documents is always the first folder in picker
+  // directory.items = [
+  //   directory.items.find((folder) => folder.name === "custom-documents"),
+  //   ...directory.items.filter((folder) => folder.name !== "custom-documents"),
+  // ].filter((i) => !!i);
+  const docTemp = await prisma.workspace_documents.findMany();
+  const transformData = (data) => {
+    const result = {
+      name: "documents",
+      type: "folder",
+      items: [],
+    };
+    const foldersMap = {};
+    data.forEach((item) => {
+      const metadata = JSON.parse(item.metadata);
+      const folderName = item.docpath.split("/")[0];
+      if (!foldersMap[folderName]) {
+        foldersMap[folderName] = {
+          name: folderName,
+          type: "folder",
+          items: [],
+        };
+        result.items.push(foldersMap[folderName]);
+      }
+      const fileItem = {
+        name: item.filename,
+        type: "file",
+        id: metadata.id,
+        url: metadata.url,
+        title: metadata.title,
+        docAuthor: metadata.docAuthor,
+        description: metadata.description,
+        docSource: metadata.docSource,
+        chunkSource: metadata.chunkSource,
+        published: metadata.published,
+        wordCount: metadata.wordCount,
+        token_count_estimate: metadata.token_count_estimate,
+        cached: false,
+        pinnedWorkspaces: [],
+        canWatch: false,
+        watched: false,
+      };
+      foldersMap[folderName].items.push(fileItem);
+    });
+    console.log({ dbResultDocsLength: result.length });
+    return result;
+  };
+  const formattedData = transformData(docTemp);
+  // console.log(JSON.stringify(formattedData, null, 2));
+  // make sure custom-documents is always the first folder in picker
+  //
+  // formattedData.items = [
+  //   formattedData.items.find((folder) => folder.name === "custom-documents"),
+  //   ...formattedData.items.filter(
+  //     (folder) => folder.name !== "custom-documents"
+  //   ),
+  // ].filter((i) => !!i);
+  console.log({ formattedData });
+  return formattedData;
+  // return directory;
+  // return directory;
 }
 
 // Searches the vector-cache folder for existing information so we dont have to re-embed a
@@ -240,4 +305,5 @@ module.exports = {
   isWithin,
   documentsPath,
   hasVectorCachedFiles,
+  viewDBFiles,
 };
