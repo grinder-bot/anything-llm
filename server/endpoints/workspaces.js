@@ -156,11 +156,49 @@ function workspaceEndpoints(app) {
             },
           });
         }
+        function convertToPrismaDate(dateString) {
+          // Parse the date string
+          const [datePart, timePart] = dateString.split(', ');
+          const [day, month, year] = datePart.split('/').map(Number);
 
+          // Convert time to 24-hour format
+          let [time, modifier] = timePart.split(' ');
+          let [hours, minutes, seconds] = time.split(':').map(Number);
+
+          if (modifier.toLowerCase() === 'pm' && hours < 12) {
+            hours += 12;
+          } else if (modifier.toLowerCase() === 'am' && hours === 12) {
+            hours = 0;
+          }
+
+          // Ensure month, day, minutes, and seconds are two digits
+          const formattedMonth = String(month).padStart(2, '0');
+          const formattedDay = String(day).padStart(2, '0');
+          const formattedHours = String(hours).padStart(2, '0');
+          const formattedMinutes = String(minutes).padStart(2, '0');
+          const formattedSeconds = String(seconds).padStart(2, '0');
+
+          // Create a formatted string in ISO 8601 format
+          const formattedDateString = `${year}-${formattedMonth}-${formattedDay}T${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
+
+          // Create a Date object
+          const date = new Date(formattedDateString);
+
+          // Check if the date is valid
+          if (isNaN(date.getTime())) {
+            throw new Error('Invalid date: ' + formattedDateString);
+          }
+
+          // Return the date in ISO format for Prisma
+          return date.toISOString();
+        }
+        //TODO: move this function to prosma utils
+        // Prisma Error: Provided Date object is invalid. Expected Date
+        const prismaDate = convertToPrismaDate(doc.published)
         // Create file record in the database
         await prisma.file.create({
           data: {
-            id: doc.id,
+            storageKey: doc.storageKey,
             url: doc.fileUploadUrl,
             pageContentUrl: doc.pageContentUploadUrl,
             title: doc.title,
@@ -168,7 +206,7 @@ function workspaceEndpoints(app) {
             description: doc.description,
             docSource: doc.docSource,
             chunkSource: doc.chunkSource,
-            published: new Date(doc.published), // Ensure this is a Date object
+            published: prismaDate,
             wordCount: doc.wordCount,
             tokenCountEstimate: doc.token_count_estimate,
             folderId: folder.id,
@@ -270,8 +308,8 @@ function workspaceEndpoints(app) {
           message:
             failedToEmbed.length > 0
               ? `${failedToEmbed.length} documents failed to add.\n\n${errors
-                  .map((msg) => `${msg}`)
-                  .join("\n\n")}`
+                .map((msg) => `${msg}`)
+                .join("\n\n")}`
               : null,
         });
       } catch (e) {
@@ -818,11 +856,11 @@ function workspaceEndpoints(app) {
         // and is a valid thread slug.
         const threadId = !!threadSlug
           ? (
-              await WorkspaceThread.get({
-                slug: String(threadSlug),
-                workspace_id: workspace.id,
-              })
-            )?.id ?? null
+            await WorkspaceThread.get({
+              slug: String(threadSlug),
+              workspace_id: workspace.id,
+            })
+          )?.id ?? null
           : null;
         const chatsToFork = await WorkspaceChats.where(
           {

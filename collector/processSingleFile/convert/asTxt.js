@@ -1,9 +1,15 @@
 const fs = require("fs");
+const { v4 } = require("uuid");
 const { tokenizeString } = require("../../utils/tokenizer");
 const { createdDate, trashFile } = require("../../utils/files");
 const { S3Service } = require("../../utils/s3");
+const path = require("path");
 
 async function asTxt({ fullFilePath = "", filename = "" }) {
+  const BUCKET_NAME = process.env.S3_BUCKET_NAME
+  if (!BUCKET_NAME) {
+    return { success: false, reason: "Missing environment variables for Document Intelligence." };
+  }
   let content = "";
   try {
     content = fs.readFileSync(fullFilePath, "utf8");
@@ -22,33 +28,34 @@ async function asTxt({ fullFilePath = "", filename = "" }) {
   }
 
   console.log(`-- Working ${filename} --`);
-
+  const uuid = v4()
+  const uniqueFilename = `${uuid}-${filename}`
   const s3Service = new S3Service();
-  //TODO: move s3 upload service to server /api/workspace/:slug/upload
 
   const fileUploadUrl = await s3Service.uploadFileToS3(
     fullFilePath,
-    "dev1.bucket.ossorioia"
+    BUCKET_NAME,
+    uuid
   );
-
-  //TODO: set the fileName ext type to txt because content is of type string
+  const fileNameWithoutExt = path.parse(filename).name
   const pageContentParams = {
     Bucket: process.env.S3_BUCKET_NAME,
-    Key: `pageContents/${filename}`,
-    Body: content, // Assuming this is a string
+    Key: `pageContents/${uuid}-${fileNameWithoutExt}.txt`,
+    Body: content,
   };
 
-  //TODO: move s3 upload service to server /api/workspace/:slug/upload
   const pageContentUploadUrl = await s3Service.uploadFileToS3(
     undefined,
     undefined,
-    pageContentParams
+    undefined,
+    pageContentParams,
   );
 
   const data = {
-    url: "file://" + fullFilePath,
+    url: fileUploadUrl,
     pageContentUploadUrl,
     fileUploadUrl,
+    storageKey: uuid,
     title: filename,
     docAuthor: "Unknown",
     description: "Unknown",

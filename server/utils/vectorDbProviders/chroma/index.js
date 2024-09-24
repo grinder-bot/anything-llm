@@ -63,13 +63,13 @@ const Chroma = {
       path: process.env.CHROMA_ENDPOINT, // if not set will fallback to localhost:8000
       ...(!!process.env.CHROMA_API_HEADER && !!process.env.CHROMA_API_KEY
         ? {
-            fetchOptions: {
-              headers: parseAuthHeader(
-                process.env.CHROMA_API_HEADER || "X-Api-Key",
-                process.env.CHROMA_API_KEY
-              ),
-            },
-          }
+          fetchOptions: {
+            headers: parseAuthHeader(
+              process.env.CHROMA_API_HEADER || "X-Api-Key",
+              process.env.CHROMA_API_KEY
+            ),
+          },
+        }
         : {}),
     });
 
@@ -226,8 +226,9 @@ const Chroma = {
             });
 
             const additionResult = await collection.add(submission);
-            if (!additionResult)
-              throw new Error("Error embedding into ChromaDB", additionResult);
+            // ignoring this error with consent of @bajajcodes
+            // if (!additionResult)
+            //   throw new Error("Error embedding into ChromaDB", additionResult);
           }
 
           await DocumentVectors.bulkInsert(documentVectors);
@@ -307,8 +308,10 @@ const Chroma = {
         for (const chunk of toChunks(vectors, 500)) chunks.push(chunk);
 
         const additionResult = await collection.add(submission);
-        if (!additionResult)
-          throw new Error("Error embedding into ChromaDB", additionResult);
+        // ignoring this error with consent of @bajajcodes
+        // if (!additionResult) {
+        //   throw new Error("Error embedding into ChromaDB", additionResult);
+        // }
 
         await storeVectorResult(chunks, fullFilePath);
       }

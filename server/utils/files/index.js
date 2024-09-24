@@ -60,10 +60,9 @@ async function fileDataFromS3(path) {
       console.error(`File '${fileName}' not found in folder '${folderName}'.`);
       return null;
     }
+    const fileNameWithoutExt = file.title.slice(0, file.title.lastIndexOf('.'));
 
-    // Build the S3 key for the pageContent file
-    // Assuming pageContent is stored under 'pageContents/{file.id}.txt'
-    const pageContentKey = `pageContents/${file.title}`;
+    const pageContentKey = `pageContents/${file.storageKey}-${fileNameWithoutExt}.txt`;
 
     // Get the pageContent from S3
     const pageContent = await s3Service.getObject({
@@ -74,6 +73,7 @@ async function fileDataFromS3(path) {
     // Construct the data object
     const data = {
       id: file.id,
+      storageKey: file.storageKey,
       url: file.url,
       pageContentUrl: file.pageContentUrl,
       title: file.title,
@@ -139,9 +139,9 @@ async function viewLocalFiles() {
         });
         const watchedInWorkspaces = liveSyncAvailable
           ? await Document.getOnlyWorkspaceIds({
-              docpath: cachefilename,
-              watched: true,
-            })
+            docpath: cachefilename,
+            watched: true,
+          })
           : [];
 
         subdocs.items.push({
@@ -204,6 +204,7 @@ async function viewDBFiles() {
         name: file.title, // Assuming 'title' is the filename
         type: "file",
         id: file.id,
+        storageKey: file.storageKey,
         url: file.url,
         title: file.title,
         docAuthor: file.docAuthor,
@@ -361,7 +362,7 @@ function hasVectorCachedFiles() {
       fs.readdirSync(vectorCachePath)?.filter((name) => name.endsWith(".json"))
         .length !== 0
     );
-  } catch {}
+  } catch { }
   return false;
 }
 
