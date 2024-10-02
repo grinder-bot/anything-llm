@@ -29,7 +29,7 @@ const SUPPORTED_FILETYPE_CONVERTERS = {
   ".jpg": "./convert/asImage.js",
   ".png": "./convert/asImage.js",
   ".jpeg": "./convert/asImage.js",
-  ".pdf": "./convert/asImage.js",
+  ".pdf": "./convert/asPDF.js",
   ".txt": "./convert/asTxt.js",
   ".md": "./convert/asTxt.js",
   ".org": "./convert/asTxt.js",

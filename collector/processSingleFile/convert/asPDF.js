@@ -1,67 +1,91 @@
-const { v4 } = require("uuid");
-const {
-  createdDate,
-  trashFile,
-  writeToServerDocuments,
-} = require("../../utils/files");
+const path = require("path");
 const { tokenizeString } = require("../../utils/tokenizer");
-const { default: slugify } = require("slugify");
+const { S3Service } = require("../../utils/s3");
+const prisma = require("../../utils/prisma");
+const asImage = require("./asImage");
+const { S3Client, GetObjectCommand } = require("@aws-sdk/client-s3");
+const streamToBuffer = require("../../utils/streamToBuffer");
 
-async function asPDF({ fullFilePath = "", filename = "" }) {
-  const pdfjsLib = await import("pdfjs-dist");
-  console.log(`-- Working ${filename} --`);
-
-  const loadingTask = pdfjsLib.default.getDocument(fullFilePath);
-  const pdf = await loadingTask.promise;
-
-  const numPages = pdf.numPages;
-  const pageContent = [];
-
-  for (let i = 1; i <= numPages; i++) {
-    console.log(`-- Parsing content from pg ${i} --`);
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    const text = content.items.map((item) => item.str).join(" ");
-
-    if (text.length) {
-      pageContent.push(text);
-    }
-  }
-
-  if (!pageContent.length) {
-    console.error(`Resulting text content was empty for ${filename}.`);
-    trashFile(fullFilePath);
+async function asPDF({ uploadedFile }) {
+  const BUCKET_NAME = process.env.S3_BUCKET_NAME;
+  if (!BUCKET_NAME) {
     return {
       success: false,
-      reason: `No text content found in ${filename}.`,
-      documents: [],
+      reason: "Missing environment variables for Document Intelligence.",
     };
   }
+  try {
+    console.log(`-- Working ${uploadedFile.title} --`);
 
-  const content = pageContent.join(" ");
-  const metadata = await pdf.getMetadata();
+    const s3Client = new S3Client({ region: process.env.AWS_REGION });
+    const objectKey = `${uploadedFile.storageKey}-${uploadedFile.title}`;
 
-  const data = {
-    id: v4(),
-    url: "file://" + fullFilePath,
-    title: filename,
-    docAuthor: metadata?.info?.Creator || "no author found",
-    description: metadata?.info?.Title || "No description found.",
-    docSource: "pdf file uploaded by the user.",
-    chunkSource: "",
-    published: createdDate(fullFilePath),
-    wordCount: content.split(" ").length,
-    pageContent: content,
-    token_count_estimate: tokenizeString(content).length,
-  };
+    const getObjectParams = {
+      Bucket: BUCKET_NAME,
+      Key: objectKey,
+    };
 
-  const document = writeToServerDocuments(
-    data,
-    `${slugify(filename)}-${data.id}`
-  );
-  trashFile(fullFilePath);
-  console.log(`[SUCCESS]: ${filename} converted & ready for embedding.\n`);
-  return { success: true, reason: null, documents: [document] };
+    const getObjectCommand = new GetObjectCommand(getObjectParams);
+    const pdfStream = await s3Client.send(getObjectCommand);
+    const pdfData = await streamToBuffer(pdfStream.Body);
+
+    const pdfjsLib = await import("pdfjs-dist");
+    const loadingTask = pdfjsLib.default.getDocument({ data: pdfData });
+    const pdf = await loadingTask.promise;
+
+    const numPages = pdf.numPages;
+    const pageContent = [];
+
+    for (let i = 1; i <= numPages; i++) {
+      console.log(`-- Parsing content from page ${i} --`);
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const text = content.items.map((item) => item.str).join(" ");
+
+      if (text.length) {
+        pageContent.push(text);
+      }
+    }
+
+    let content = pageContent.join(" ");
+    if (!content.length) {
+      console.error(`Resulting text content was empty for ${uploadedFile.title}.`);
+      return await asImage({ uploadedFile });
+    }
+
+    const fileNameWithoutExt = path.parse(uploadedFile.title).name;
+    const s3Service = new S3Service();
+
+    const pageContentParams = {
+      Bucket: BUCKET_NAME,
+      Key: `pageContents/${uploadedFile.storageKey}-${fileNameWithoutExt}.txt`,
+      Body: content,
+    };
+
+    const pageContentUploadUrl = await s3Service.uploadFileToS3(
+      undefined,
+      undefined,
+      undefined,
+      pageContentParams
+    );
+
+    const data = await prisma.file.update({
+      data: {
+        pageContentUrl: pageContentUploadUrl,
+        wordCount: content.split(" ").length,
+        tokenCountEstimate: tokenizeString(content).length,
+      },
+      where: {
+        id: uploadedFile.id,
+      },
+    });
+
+    console.log(`[SUCCESS]: ${uploadedFile.title} converted & ready for embedding.\n`);
+    return { success: true, reason: null, documents: [data] };
+  } catch (error) {
+    console.error("An error occurred while processing the document:", error);
+    return { success: false, reason: "Error processing the document." };
+  }
 }
 
 module.exports = asPDF;
