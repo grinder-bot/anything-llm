@@ -13,22 +13,18 @@ class Semaphore {
   async acquire(fileName) {
     if (this.counter > 0) {
       this.counter--;
-      console.log(`Lock acquired immediately for file: ${fileName}. Remaining locks: ${this.counter}`);
       return;
     }
-    console.log(`No locks available. File ${fileName} is queued. Queue length: ${this.tasks.length + 1}`);
+    console.log(`Queue is full. File ${fileName} will be processed soon.`);
     await new Promise((resolve) => this.tasks.push({ resolve, fileName }));
     this.counter--;
-    console.log(`Lock acquired after waiting for file: ${fileName}. Remaining locks: ${this.counter}`);
   }
 
   release() {
     this.counter++;
-    console.log(`Lock released. Remaining locks: ${this.counter}`);
     if (this.tasks.length > 0) {
       this.counter--;
       const nextTask = this.tasks.shift();
-      console.log(`Notifying next task in queue for file: ${nextTask.fileName}. Queue length after shift: ${this.tasks.length}`);
       nextTask.resolve();
     }
   }
@@ -78,10 +74,10 @@ async function analyzeDocumentWithRetry(
 
 async function asImage({ fullFilePath = "", filename = "", uploadedFile }) {
   const fileName = uploadedFile.title;
-  console.log(`Attempting to acquire lock for file: ${fileName}`);
+  console.log(`[asImage] Adding to queue: ${fileName}`);
   await semaphore.acquire(fileName);
-  console.log(`Lock acquired for file: ${fileName}`);
-  console.log(`Current queue length: ${semaphore.tasks.length}`);
+  console.log(`[asImage] Starting processing for file: ${fileName}`);
+
   try {
     const BUCKET_NAME = process.env.S3_BUCKET_NAME;
     if (!BUCKET_NAME) {
@@ -90,7 +86,7 @@ async function asImage({ fullFilePath = "", filename = "", uploadedFile }) {
         reason: "Missing environment variables for Document Intelligence.",
       };
     }
-    console.log(`-- Working on ${fileName} --`);
+
     const s3Service = new S3Service();
     const textractService = new TextractService();
 
@@ -136,7 +132,6 @@ async function asImage({ fullFilePath = "", filename = "", uploadedFile }) {
       },
     });
 
-    console.log(`Successfully processed file: ${fileName}`);
     return { success: true, reason: null, documents: [data] };
   } catch (error) {
     console.error(
@@ -145,10 +140,8 @@ async function asImage({ fullFilePath = "", filename = "", uploadedFile }) {
     );
     return { success: false, reason: "Error processing the document." };
   } finally {
-    console.log(`Releasing lock for file: ${fileName}`);
+    console.log(`[asImage] File is processed: ${fileName}`);
     semaphore.release();
-    console.log(`Lock released for file: ${fileName}`);
-    console.log(`Current queue length after release: ${semaphore.tasks.length}`);
   }
 }
 

@@ -15,7 +15,7 @@ async function asPDF({ uploadedFile }) {
     };
   }
   try {
-    console.log(`-- Working ${uploadedFile.title} --`);
+    console.log(`Processing ${uploadedFile.title} as PDF.`);
 
     const s3Client = new S3Client({ region: process.env.AWS_REGION });
     const objectKey = `${uploadedFile.storageKey}-${uploadedFile.title}`;
@@ -48,7 +48,7 @@ async function asPDF({ uploadedFile }) {
 
     let content = pageContent.join(" ");
     if (!content.length) {
-      console.error(`Resulting text content was empty for ${uploadedFile.title}.`);
+      console.error(`${uploadedFile.title} does not contain any text. Attempting to process as image.`);
       return await asImage({ uploadedFile });
     }
 
