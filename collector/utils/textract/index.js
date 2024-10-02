@@ -56,15 +56,16 @@ class TextractService {
     let status = "IN_PROGRESS";
     let response = await this.#getJobStatus(jobId);
 
-    console.log(`Job status: ${response.JobStatus}`);
     status = response.JobStatus;
 
     while (status === "IN_PROGRESS") {
       await sleep(1000);
       response = await this.#getJobStatus(jobId);
       status = response.JobStatus;
-      console.log(`Job status: ${status}`);
+      // console.log(`Job status: ${status}`);
     }
+
+    console.log(`Job status: ${response.JobStatus} jobId: ${jobId}`);
 
     return status === "SUCCEEDED";
   }

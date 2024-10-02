@@ -11,7 +11,7 @@ async function asPDF({ uploadedFile }) {
   if (!BUCKET_NAME) {
     return {
       success: false,
-      reason: "Missing environment variables for Document Intelligence.",
+      reason: "Missing environment variables for Bucket Name.",
     };
   }
   try {
@@ -37,7 +37,6 @@ async function asPDF({ uploadedFile }) {
     const pageContent = [];
 
     for (let i = 1; i <= numPages; i++) {
-      console.log(`-- Parsing content from page ${i} --`);
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
       const text = content.items.map((item) => item.str).join(" ");
