@@ -21,6 +21,8 @@
     "@aws-sdk/client-textract": "^3.654.0",
     "@azure/ai-form-recognizer": "^5.0.0",
     "@googleapis/youtube": "^9.0.0",
+    "@logtail/node": "^0.5.0",
+    "@logtail/winston": "^0.5.0",
     "@prisma/client": "^5.20.0",
     "@xenova/transformers": "^2.11.0",
     "bcrypt": "^5.1.0",

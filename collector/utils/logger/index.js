@@ -1,4 +1,6 @@
 const winston = require("winston");
+const { Logtail } = require("@logtail/node");
+const { LogtailTransport } = require("@logtail/winston");
 
 class Logger {
   logger = console;
@@ -11,23 +13,12 @@ class Logger {
   }
 
   getWinstonLogger() {
+    const logtail = new Logtail(process.env.COLLECTOR_BETTER_STACK);
+
     const logger = winston.createLogger({
       level: "info",
       defaultMeta: { service: "collector" },
-      transports: [
-        new winston.transports.Console({
-          format: winston.format.combine(
-            winston.format.colorize(),
-            winston.format.printf(
-              ({ level, message, service, origin = "" }) => {
-                return `\x1b[36m[${service}]\x1b[0m${
-                  origin ? `\x1b[33m[${origin}]\x1b[0m` : ""
-                } ${level}: ${message}`;
-              }
-            )
-          ),
-        }),
-      ],
+      transports: [new LogtailTransport(logtail)],
     });
 
     console.log = function () {
