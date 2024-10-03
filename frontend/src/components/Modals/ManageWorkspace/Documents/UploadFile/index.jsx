@@ -28,6 +28,7 @@ export default function UploadFile({
     "jpeg",
     "txt",
     "docx",
+    "doc",
     "md",
     "html",
   ];

@@ -6,6 +6,7 @@ const ACCEPTED_MIMES = {
 
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [
     ".docx",
+    ".doc",
   ],
   // "application/vnd.openxmlformats-officedocument.presentationml.presentation": [
   //   ".pptx",
@@ -41,6 +42,7 @@ const SUPPORTED_FILETYPE_CONVERTERS = {
   // ".pdf": "./convert/asPDF.js",
 
   ".docx": "./convert/asDocx.js",
+  ".doc": "./convert/asDocx.js",
   // ".pptx": "./convert/asOfficeMime.js",
 
   // ".odt": "./convert/asOfficeMime.js",

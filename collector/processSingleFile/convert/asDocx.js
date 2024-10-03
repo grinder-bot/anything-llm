@@ -1,27 +1,39 @@
-const { DocxLoader } = require("langchain/document_loaders/fs/docx");
-const { tokenizeString } = require("../../utils/tokenizer");
 const { S3Service } = require("../../utils/s3");
 const prisma = require("../../utils/prisma");
 const path = require("path");
 const fs = require("fs").promises;
+const mammoth = require("mammoth");
+const textract = require("textract");
+const { tokenizeString } = require("../../utils/tokenizer");
 
-// Define the temporary directory (e.g., 'temp' folder in your project)
 const TEMP_DIRECTORY = path.join(__dirname, "temp");
 
-// Function to ensure the temporary directory exists
 async function ensureTempDirectory() {
   try {
     await fs.access(TEMP_DIRECTORY);
-    // Directory exists
   } catch (error) {
-    // Directory does not exist, create it
     await fs.mkdir(TEMP_DIRECTORY, { recursive: true });
     console.log(`Created temporary directory at ${TEMP_DIRECTORY}`);
   }
 }
 
-//TODO: remove unused variables
-async function asDocX({ fullFilePath = "", filename = "", uploadedFile }) {
+async function parseDocx(filePath) {
+  const { value: text } = await mammoth.extractRawText({ path: filePath });
+  return text.split("\n").filter(line => line.length > 0);
+}
+
+async function parseDoc(filePath) {
+  return new Promise((resolve, reject) => {
+    textract.fromFileWithPath(filePath, (error, text) => {
+      if (error) {
+        return reject(error);
+      }
+      resolve(text.split("\n").filter(line => line.length > 0));
+    });
+  });
+}
+
+async function asDocX({ filename, uploadedFile }) {
   const bucketName = process.env.S3_BUCKET_NAME;
   if (!bucketName) {
     return {
@@ -41,8 +53,6 @@ async function asDocX({ fullFilePath = "", filename = "", uploadedFile }) {
   );
 
   const fileNameWithoutExt = path.parse(uploadedFile.title).name;
-
-  // Ensure the temporary directory exists
   await ensureTempDirectory();
 
   const tempFilePath = path.join(
@@ -50,19 +60,41 @@ async function asDocX({ fullFilePath = "", filename = "", uploadedFile }) {
     `${uploadedFile.storageKey}-${uploadedFile.title}`
   );
 
-  // Write the file buffer to the temporary file
   await fs.writeFile(tempFilePath, fileContents);
   console.log(`Temporary file written to ${tempFilePath}`);
 
-  const loader = new DocxLoader(tempFilePath);
-
   let pageContent = [];
-  const docs = await loader.load();
 
-  // Extract page content
-  pageContent = docs
-    .map((doc) => doc.pageContent)
-    .filter((content) => content && content.length > 0);
+  if (path.extname(uploadedFile.title) === '.docx') {
+    try {
+      pageContent = await parseDocx(tempFilePath);
+    } catch (error) {
+      console.error(`Failed to load .docx file: ${error.message}`);
+      return {
+        success: false,
+        reason: `Error loading .docx file: ${error.message}`,
+        documents: [],
+      };
+    }
+  } else if (path.extname(uploadedFile.title) === '.doc') {
+    try {
+      pageContent = await parseDoc(tempFilePath);
+    } catch (error) {
+      console.error(`Failed to parse .doc file: ${error.message}`);
+      return {
+        success: false,
+        reason: `Error parsing .doc file: ${error.message}`,
+        documents: [],
+      };
+    }
+  } else {
+    console.error(`Unsupported file type for ${filename}.`);
+    return {
+      success: false,
+      reason: `Unsupported file type for ${filename}.`,
+      documents: [],
+    };
+  }
 
   if (!pageContent.length) {
     console.error(`Resulting text content was empty for ${filename}.`);
@@ -73,9 +105,7 @@ async function asDocX({ fullFilePath = "", filename = "", uploadedFile }) {
     };
   }
 
-  console.log(`-- Working ${filename} --`);
-
-  const extractedText = pageContent.join("\n"); // Use newline for readability
+  const extractedText = pageContent.join("\n");
 
   const pageContentParams = {
     Bucket: bucketName,
