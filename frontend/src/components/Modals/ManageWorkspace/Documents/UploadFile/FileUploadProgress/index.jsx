@@ -48,6 +48,7 @@ function FileUploadProgressComponent({
       const { response, data } = await Workspace.uploadFile(slug, formData);
       if (!response.ok) {
         setStatus("failed");
+        setLoading(false);
         clearInterval(timer);
         onUploadError(data.error);
         setError(data.error);

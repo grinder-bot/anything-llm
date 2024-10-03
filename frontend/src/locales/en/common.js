@@ -526,7 +526,10 @@ const TRANSLATIONS = {
       occurred: "Occurred At",
     },
   },
-
+  warning: {
+    firstText: "AI is still process files",
+    secondText: "items: each item is either in process or corrupt."
+  },
   // Privacy & Data-Handling
   privacy: {
     title: "Privacy & Data-Handling",

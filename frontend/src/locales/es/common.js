@@ -519,7 +519,10 @@ const TRANSLATIONS = {
       occurred: "Ocurrido a",
     },
   },
-
+  warning: {
+    firstText: "La IA todavía está procesando archivos",
+    secondText: "elementos: cada elemento está o bien en proceso o es corrupto."
+  },
   privacy: {
     title: "Privacidad y manejo de datos",
     description:

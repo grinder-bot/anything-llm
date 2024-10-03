@@ -6,6 +6,7 @@ import showToast from "../../../../utils/toast";
 import Directory from "./Directory";
 import UploadFile from "./UploadFile";
 import WorkspaceDirectory from "./WorkspaceDirectory";
+import { t } from "i18next";
 
 // OpenAI Cost per token
 // ref: https://openai.com/pricing#:~:text=%C2%A0/%201K%20tokens-,Embedding%20models,-Build%20advanced%20search
@@ -203,7 +204,7 @@ export default function DocumentSettings({
 
     if (cannotMoveItmes.length > 0) {
       showToast(
-        `Cannot Save and Embed ${cannotMoveItmes.length} items`,
+        `${t("warning.firstText")} ${cannotMoveItmes.length} ${t("warning.secondText")}`,
         "warning"
       );
     }
