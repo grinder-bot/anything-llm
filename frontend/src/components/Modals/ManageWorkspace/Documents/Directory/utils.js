@@ -19,28 +19,21 @@ export function filterFileSearchResults(files = [], searchTerm = "") {
   if (!searchTerm) return files?.items || [];
 
   const searchResult = [];
+
   for (const folder of files?.items) {
-    // If folder is a good match then add all its children
-    if (strDistance(folder.name, searchTerm) <= LEVENSHTEIN_MIN) {
-      searchResult.push(folder);
-      continue;
-    }
+    // Check if the folder name matches the search term
+    const folderMatches = folder.name.toLowerCase().startsWith(searchTerm.toLowerCase());
 
-    // Otherwise check children for good results
-    const fileSearchResults = [];
-    for (const file of folder?.items) {
-      if (
-        strDistance(stripUuidAndJsonFromString(file.name), searchTerm) <=
-        LEVENSHTEIN_MIN
-      ) {
-        fileSearchResults.push(file);
-      }
-    }
+    // Filter matching files within the folder
+    const matchingFiles = folder?.items.filter(file =>
+      file.name.toLowerCase().startsWith(searchTerm.toLowerCase())
+    );
 
-    if (fileSearchResults.length > 0) {
+    // If either the folder matches or there are matching files, add to results
+    if (folderMatches || (matchingFiles && matchingFiles.length)) {
       searchResult.push({
         ...folder,
-        items: fileSearchResults,
+        items: matchingFiles || [],
       });
     }
   }
